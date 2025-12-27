@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grcm"
+version = "1.0.0"
+description = "Grounded Resonant Consciousness Module - AI middleware for uncertainty quantification, energy-efficient inference, and persistent memory"
+readme = "README.md"
+license = {text = "Dual License: MIT (open source) + Commercial"}
+requires-python = ">=3.9"
+authors = [
+    {name = "GRCM Research Team", email = "contact@grcm.ai"}
+]
+keywords = [
+    "ai",
+    "middleware",
+    "consciousness",
+    "robotics",
+    "autonomous-systems",
+    "uncertainty-quantification",
+    "energy-efficient",
+    "tesla",
+    "optimus"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.21.0",
+    "pyyaml>=6.0",
+    "psycopg2-binary>=2.9.0",
+]
+
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.22.0",
+    "pydantic>=2.0.0",
+]
+grpc = [
+    "grpcio>=1.50.0",
+    "grpcio-tools>=1.50.0",
+    "protobuf>=4.21.0",
+]
+ros2 = [
+    "rclpy>=3.0.0",
+]
+full = [
+    "grcm[server,grpc]",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/grcm-ai/grcm"
+Documentation = "https://grcm.ai/docs"
+Repository = "https://github.com/grcm-ai/grcm"
+Issues = "https://github.com/grcm-ai/grcm/issues"
+
+[project.scripts]
+grcm-server = "grcm.api.server:main"
+grcm-benchmark = "grcm.benchmark:cli_main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["grcm*"]
+
+[tool.setuptools.package-data]
+grcm = ["*.yaml", "*.json"]
+
+[tool.black]
+line-length = 88
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

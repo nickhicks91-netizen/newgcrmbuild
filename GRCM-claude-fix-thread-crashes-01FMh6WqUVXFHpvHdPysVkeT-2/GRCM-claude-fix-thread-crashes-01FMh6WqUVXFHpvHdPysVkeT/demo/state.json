@@ -1,0 +1,26 @@
+{
+  "step": 0,
+  "timestamp": 1701388800.0,
+  "position": {
+    "x": 10.0,
+    "y": 0.0,
+    "z": 0.0
+  },
+  "spiral": {
+    "coherence": 0.75,
+    "radius": 1.0,
+    "angle": 0.0,
+    "stabilizer": 2.2
+  },
+  "mobius": {
+    "energy": 0.08,
+    "gate_mean": 0.92,
+    "gate_min": 0.85,
+    "gate_max": 0.98,
+    "purity": 0.95
+  },
+  "color": "healthy",
+  "torsion": 0.08,
+  "coherence": 0.75,
+  "mode": "placeholder"
+}
