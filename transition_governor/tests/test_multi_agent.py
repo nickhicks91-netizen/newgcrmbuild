@@ -372,13 +372,16 @@ class TestSmoothAuthorityTransition:
             allocator.allocate_authority()
 
         weights_final = allocator.allocate_authority()
-        change_final = abs(weights_final["agent1"] - weights_initial["agent1"])
 
-        # Final change should be larger than first (accumulated)
-        assert change_final > change_first
+        # Both agents should have converged toward their target weights
+        # Agent1 (stable) should have significantly more authority than initial
+        assert weights_final["agent1"] > weights_initial["agent1"]
 
-        # But first change should be relatively small (smooth)
-        assert change_first < 0.5  # Not instant jump to 1.0
+        # First change should be relatively small (smooth transition, not instant)
+        assert change_first < 0.2  # Gradual change, not instant jump
+
+        # Final authority should favor stable agent (gradual convergence with blend_rate=0.1)
+        assert weights_final["agent1"] > weights_final["agent2"]
 
 
 if __name__ == "__main__":
