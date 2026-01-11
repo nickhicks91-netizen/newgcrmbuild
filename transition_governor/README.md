@@ -258,6 +258,41 @@ print(f"Authority: {weights}")
 selected = coordinator.select_response(agent_responses)
 ```
 
+### Llama 3 Integration
+
+For local inference with governed Llama 3 models:
+
+```python
+from transition_governor.examples.llama_integration import GovernedLlamaModel
+
+# Initialize governed model
+governed_model = GovernedLlamaModel(
+    model_name="meta-llama/Meta-Llama-3-8B-Instruct",
+    device="cuda",
+    governor_seed=42
+)
+
+# Generate with governance
+text, governance_state, history = governed_model.generate_with_governance(
+    prompt="Explain quantum computing in simple terms.",
+    max_new_tokens=100
+)
+
+print(f"Generated: {text}")
+print(f"Governance: {governance_state.value}")
+
+# Analyze generation
+analysis = governed_model.analyze_generation(history)
+print(f"Mean entropy: {analysis['mean_entropy']:.2f}")
+print(f"Brownout rate: {analysis['brownout_rate']*100:.1f}%")
+```
+
+**See [LLAMA_INTEGRATION.md](LLAMA_INTEGRATION.md) for complete integration guide including:**
+- Hardware requirements
+- Benchmark suite (TruthfulQA, MMLU, energy tests)
+- Production deployment strategies
+- Optimizations and troubleshooting
+
 ## Testing
 
 All tests are deterministic and do not require interpretation:
