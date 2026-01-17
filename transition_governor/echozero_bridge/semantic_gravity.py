@@ -55,8 +55,10 @@ class SemanticGravityEngine:
         self,
         hologram: HolographicMatrix,
         attractor_threshold: float = 5.0,
-        correction_strength: float = 1.5,
-        phase_inversion: bool = True
+        correction_strength: float = 2.5,
+        phase_inversion: bool = True,
+        adaptive_threshold: bool = True,
+        max_correction_iterations: int = 5
     ):
         """
         Args:
@@ -64,11 +66,15 @@ class SemanticGravityEngine:
             attractor_threshold: Multiple of mean magnitude to flag as attractor
             correction_strength: Multiplier for counter-mass (>1 to overpower error)
             phase_inversion: Whether to invert phase for cancellation
+            adaptive_threshold: Whether to adjust threshold based on hologram statistics
+            max_correction_iterations: Maximum correction passes per auto_correct call
         """
         self.hologram = hologram
         self.attractor_threshold = attractor_threshold
         self.correction_strength = correction_strength
         self.phase_inversion = phase_inversion
+        self.adaptive_threshold = adaptive_threshold
+        self.max_correction_iterations = max_correction_iterations
 
         # Tracking
         self.detected_hallucinations: List[HallucinationSignature] = []
@@ -104,6 +110,31 @@ class SemanticGravityEngine:
         self.detected_hallucinations.extend(hallucinations)
         return hallucinations
 
+    def _compute_adaptive_threshold(self) -> float:
+        """
+        Compute adaptive threshold based on hologram statistics.
+
+        Returns higher threshold when hologram has more variance (reduces false positives).
+        """
+        if not self.adaptive_threshold:
+            return self.attractor_threshold
+
+        H_mag = np.abs(self.hologram.H)
+        mean_mag = np.mean(H_mag)
+        std_mag = np.std(H_mag)
+
+        if mean_mag < 1e-10:
+            return self.attractor_threshold
+
+        # Coefficient of variation
+        cv = std_mag / (mean_mag + 1e-10)
+
+        # Higher variance → higher threshold (more selective)
+        # Scale base threshold by (1 + cv)
+        adaptive = self.attractor_threshold * (1.0 + cv)
+
+        return min(adaptive, self.attractor_threshold * 3.0)  # Cap at 3× base
+
     def _detect_high_mass_attractors(self) -> List[HallucinationSignature]:
         """
         Detect persistent errors via high-mass regions.
@@ -112,7 +143,9 @@ class SemanticGravityEngine:
         (incorrect) pattern, creating semantic gravity that pulls future
         responses toward the error.
         """
-        attractors = self.hologram.detect_attractors(threshold=self.attractor_threshold)
+        # Use adaptive threshold if enabled
+        threshold = self._compute_adaptive_threshold()
+        attractors = self.hologram.detect_attractors(threshold=threshold)
 
         hallucinations = []
         mean_magnitude = np.mean(np.abs(self.hologram.H))
@@ -123,12 +156,14 @@ class SemanticGravityEngine:
         for idx, magnitude in attractors:
             # Confidence based on how much it exceeds mean
             magnitude_ratio = magnitude / (mean_magnitude + 1e-10)
-            confidence = min(1.0, magnitude_ratio / self.attractor_threshold)
+            confidence = min(1.0, magnitude_ratio / threshold)
 
             # Generate correction vector (full dimensionality)
-            # Extract the complex component at this index
+            # Use stronger correction for higher confidence
+            effective_strength = self.correction_strength * (1.0 + confidence)
+
             correction = np.zeros(self.hologram.dimension, dtype=np.complex128)
-            correction[idx] = -self.hologram.H[idx] * self.correction_strength
+            correction[idx] = -self.hologram.H[idx] * effective_strength
 
             hallucination = HallucinationSignature(
                 hallucination_type=HallucinationType.HIGH_MASS_ATTRACTOR,
@@ -261,50 +296,79 @@ class SemanticGravityEngine:
     def auto_correct(
         self,
         min_confidence: float = 0.7,
-        max_corrections: int = 10
+        max_corrections: int = 10,
+        iterative: bool = True
     ) -> Dict:
         """
-        Automatically detect and correct hallucinations.
+        Automatically detect and correct hallucinations with iterative refinement.
 
         Args:
             min_confidence: Minimum detection confidence to trigger correction
-            max_corrections: Maximum number of corrections to apply
+            max_corrections: Maximum number of corrections to apply per iteration
+            iterative: Whether to apply multiple correction passes
 
         Returns:
             Summary statistics
         """
-        # Detect all hallucinations
-        hallucinations = self.detect_hallucinations()
+        total_corrections_applied = 0
+        total_successful_corrections = 0
+        all_detected = []
 
-        # Filter by confidence
-        high_confidence = [
-            h for h in hallucinations
-            if h.confidence >= min_confidence
-        ]
+        iterations = self.max_correction_iterations if iterative else 1
 
-        # Sort by magnitude (correct strongest first)
-        high_confidence.sort(key=lambda h: h.magnitude, reverse=True)
+        for iteration in range(iterations):
+            # Detect hallucinations in current state
+            hallucinations = self.detect_hallucinations()
 
-        # Apply corrections
-        corrections_applied = 0
-        successful_corrections = 0
+            if not hallucinations:
+                break  # No more hallucinations detected
 
-        for hallucination in high_confidence[:max_corrections]:
-            result = self.correct_hallucination(hallucination)
-            corrections_applied += 1
+            all_detected.extend(hallucinations)
 
-            if result.get('attractor_reduced', False):
-                successful_corrections += 1
+            # Filter by confidence
+            high_confidence = [
+                h for h in hallucinations
+                if h.confidence >= min_confidence
+            ]
 
-        correction_rate = successful_corrections / corrections_applied if corrections_applied > 0 else 0
+            if not high_confidence:
+                break  # No high-confidence detections
+
+            # Sort by magnitude (correct strongest first)
+            high_confidence.sort(key=lambda h: h.magnitude, reverse=True)
+
+            # Apply corrections for this iteration
+            corrections_this_iteration = 0
+            successful_this_iteration = 0
+
+            for hallucination in high_confidence[:max_corrections]:
+                result = self.correct_hallucination(hallucination)
+                corrections_this_iteration += 1
+                total_corrections_applied += 1
+
+                if result.get('attractor_reduced', False):
+                    successful_this_iteration += 1
+                    total_successful_corrections += 1
+
+            # Stop if no successful corrections this iteration
+            if successful_this_iteration == 0:
+                break
+
+        correction_rate = (total_successful_corrections / total_corrections_applied
+                          if total_corrections_applied > 0 else 0)
+
+        # Get unique hallucination types
+        unique_types = list(set(h.hallucination_type.value for h in all_detected))
 
         return {
-            'total_detected': len(hallucinations),
-            'high_confidence': len(high_confidence),
-            'corrections_applied': corrections_applied,
-            'successful_corrections': successful_corrections,
+            'total_detected': len(all_detected),
+            'unique_detected': len(set((h.attractor_indices[0] if h.attractor_indices else -1)
+                                       for h in all_detected)),
+            'corrections_applied': total_corrections_applied,
+            'successful_corrections': total_successful_corrections,
             'correction_rate': correction_rate,
-            'hallucination_types': [h.hallucination_type.value for h in high_confidence]
+            'iterations_run': iteration + 1,
+            'hallucination_types': unique_types
         }
 
     def compute_semantic_gravity_field(self) -> np.ndarray:
@@ -327,30 +391,59 @@ class SemanticGravityEngine:
         Measure overall health of semantic space metric.
 
         Returns:
-            Health metrics
+            Health metrics (0-1, where 1 = perfect health)
         """
-        gravity_field = self.compute_semantic_gravity_field()
+        H_mag = np.abs(self.hologram.H)
+        mean_mag = np.mean(H_mag)
+        std_mag = np.std(H_mag)
 
-        # Measure curvature (how warped is space?)
-        curvature = np.std(gravity_field)
+        if mean_mag < 1e-10:
+            # Empty or near-empty hologram
+            return {
+                'health_score': 1.0,  # Perfect health (no attractors)
+                'curvature': 0.0,
+                'flatness': 1.0,
+                'num_attractors': 0,
+                'mean_gravity': 0.0,
+                'max_gravity': 0.0
+            }
+
+        # Measure curvature via coefficient of variation
+        cv = std_mag / (mean_mag + 1e-10)
+        curvature = min(1.0, cv / 2.0)  # Normalize to 0-1
 
         # Count attractors
-        num_attractors = len(self.hologram.detect_attractors(self.attractor_threshold))
+        threshold = self._compute_adaptive_threshold()
+        num_attractors = len(self.hologram.detect_attractors(threshold))
 
-        # Measure flatness (ideal: uniform distribution)
-        H_mag = np.abs(self.hologram.H)
-        flatness = 1.0 / (np.std(H_mag) / (np.mean(H_mag) + 1e-10) + 1.0)
+        # Flatness: inverse of normalized CV (high flatness = good)
+        flatness = 1.0 / (1.0 + cv)
+
+        # Attractor penalty: exponential decay
+        attractor_penalty = np.exp(-num_attractors / 5.0)  # More aggressive penalty
+
+        # Curvature penalty
+        curvature_penalty = 1.0 - curvature
 
         # Overall health score (0-1, higher is better)
-        health_score = flatness * (1.0 / (curvature + 1.0)) * np.exp(-num_attractors / 10.0)
+        # Components: flatness (40%), attractor_penalty (40%), curvature_penalty (20%)
+        health_score = (
+            0.4 * flatness +
+            0.4 * attractor_penalty +
+            0.2 * curvature_penalty
+        )
+
+        # Compute gravity field for additional metrics
+        gravity_field = self.compute_semantic_gravity_field()
 
         return {
-            'health_score': min(1.0, health_score),
+            'health_score': np.clip(health_score, 0.0, 1.0),
             'curvature': curvature,
             'flatness': flatness,
             'num_attractors': num_attractors,
             'mean_gravity': np.mean(np.abs(gravity_field)),
-            'max_gravity': np.max(np.abs(gravity_field))
+            'max_gravity': np.max(np.abs(gravity_field)),
+            'attractor_penalty': attractor_penalty
         }
 
     def get_correction_statistics(self) -> Dict:

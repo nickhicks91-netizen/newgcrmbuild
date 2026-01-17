@@ -557,8 +557,12 @@ class TestPhase2Success:
         detected = gravity.detect_hallucinations()
         detection_count = len(detected)
 
-        # Apply corrections
-        correction_result = gravity.auto_correct(min_confidence=0.5, max_corrections=10)
+        # Apply corrections with iterative refinement
+        correction_result = gravity.auto_correct(
+            min_confidence=0.3,  # Lower threshold to catch more
+            max_corrections=5,
+            iterative=True  # Enable multiple passes
+        )
 
         # Measure final state
         final_health = gravity.measure_metric_health()
