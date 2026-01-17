@@ -1,0 +1,24 @@
+# 3D Torsion Memory Lattice Configuration
+# Long-term, self-healing, noise-resistant identity memory
+# PATCHED: Fixed physics regime for stable self-healing
+
+default_config:
+  # Lattice dimensions
+  size: 5                    # 5x5x5 grid = 125 nodes
+
+  # XY-model physics parameters (TUNED for stability)
+  coupling_strength: 1.0     # Balanced neighbor coupling with conservative relaxation
+  decay_gamma: 0.005         # Slow decay: prevents collapse to zero attractor
+
+  # Memory integration parameters (PATCHED)
+  write_strength: 0.12       # Meaningful write influence: prevents info dilution
+  noise_level: 0.0           # Thermal noise (for robustness testing)
+
+  # Synchronization control
+  sync_interval_steps: 300   # Background update frequency (0.1-2 Hz range)
+
+  # Möbius stability filtering (PATCHED)
+  torsion_threshold: 2.5     # Realistic for N-dimensional states (scales ~sqrt(N))
+
+  # Relaxation dynamics (PATCHED)
+  relaxation_steps: 40       # Deeper healing sweep: ensures local equilibration

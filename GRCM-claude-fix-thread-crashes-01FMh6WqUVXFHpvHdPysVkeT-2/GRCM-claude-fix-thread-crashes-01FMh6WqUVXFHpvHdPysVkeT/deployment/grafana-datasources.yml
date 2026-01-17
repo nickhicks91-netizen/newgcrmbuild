@@ -1,0 +1,384 @@
+# Grafana Datasource Configuration for GRCM
+apiVersion: 1
+
+datasources:
+  # Prometheus datasource for metrics
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+    version: 1
+
+  # MLflow datasource (via Prometheus if metrics exported)
+  - name: MLflow
+    type: prometheus
+    access: proxy
+    url: http://mlflow:5000
+    isDefault: false
+    editable: true
+    jsonData:
+      timeInterval: "30s"
+    version: 1
+
+# Pre-configured Grafana dashboards
+---
+# File: /etc/grafana/provisioning/dashboards/grcm_dashboards.yml
+apiVersion: 1
+
+providers:
+  - name: 'GRCM Dashboards'
+    orgId: 1
+    folder: 'GRCM'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+
+---
+# GRCM Main Dashboard JSON
+# File: /var/lib/grafana/dashboards/grcm_main.json
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "Prometheus",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "GRCM Phi (Φ) - Integrated Information",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "grcm_phi",
+          "legendFormat": "Phi",
+          "refId": "A"
+        }
+      ],
+      "yaxes": [
+        {
+          "label": "Phi (Φ)",
+          "show": true
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "title": "Coherence Distribution",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "grcm_coherence_mean",
+          "legendFormat": "Mean Coherence",
+          "refId": "A"
+        },
+        {
+          "expr": "grcm_coherence_std",
+          "legendFormat": "Coherence Std Dev",
+          "refId": "B"
+        }
+      ],
+      "yaxes": [
+        {
+          "label": "Coherence",
+          "show": true,
+          "min": 0,
+          "max": 1
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "title": "Qualia Distribution",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "grcm_qualia_calm",
+          "legendFormat": "Calm",
+          "refId": "A"
+        },
+        {
+          "expr": "grcm_qualia_alert",
+          "legendFormat": "Alert",
+          "refId": "B"
+        },
+        {
+          "expr": "grcm_qualia_curious",
+          "legendFormat": "Curious",
+          "refId": "C"
+        },
+        {
+          "expr": "grcm_qualia_conflicted",
+          "legendFormat": "Conflicted",
+          "refId": "D"
+        }
+      ],
+      "yaxes": [
+        {
+          "label": "Probability",
+          "show": true,
+          "min": 0,
+          "max": 1
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "stack": true
+    },
+    {
+      "title": "Inference Latency",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, rate(grcm_inference_latency_ms_bucket[5m]))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(grcm_inference_latency_ms_bucket[5m]))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(grcm_inference_latency_ms_bucket[5m]))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "yaxes": [
+        {
+          "label": "Latency (ms)",
+          "show": true
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "title": "Desire Alignment",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "grcm_desire_alignment_mean",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 0.5, "color": "yellow"},
+              {"value": 0.8, "color": "green"}
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "title": "Memory Usage (MB)",
+      "type": "gauge",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "grcm_memory_usage_mb",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 2048,
+          "thresholds": {
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 1024, "color": "yellow"},
+              {"value": 1536, "color": "red"}
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      }
+    },
+    {
+      "title": "Throughput (samples/sec)",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(grcm_inference_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 16
+      }
+    },
+    {
+      "title": "Ethical Halt Rate",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(grcm_ethical_halts_total[5m])",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 0.05, "color": "yellow"},
+              {"value": 0.1, "color": "red"}
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      }
+    },
+    {
+      "title": "API Request Rate",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(grcm_api_requests_total[5m])",
+          "legendFormat": "Requests/sec",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      }
+    },
+    {
+      "title": "API Error Rate",
+      "type": "graph",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(grcm_api_errors_total[5m])",
+          "legendFormat": "Errors/sec",
+          "refId": "A"
+        }
+      ],
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "alert": {
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [0.05],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": ["A", "5m", "now"]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "alerting",
+        "frequency": "60s",
+        "handler": 1,
+        "name": "High Error Rate",
+        "noDataState": "no_data",
+        "notifications": []
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": ["grcm", "consciousness", "monitoring"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "GRCM Consciousness Monitoring",
+  "uid": "grcm_main",
+  "version": 1
+}

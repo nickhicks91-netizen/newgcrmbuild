@@ -1,0 +1,74 @@
+# GRCM Default Configuration
+# Grounded Resonant Consciousness Module Settings
+
+# Model Architecture
+input_dim: 15
+freq_dim: 8
+memory_size: 32
+
+# Resonant Attention Settings
+attention:
+  freq_dim: 8
+  base_bandwidth: 0.5
+  coherence_threshold: 0.7
+  bandwidth_min: 0.1
+  bandwidth_max: 1.0
+
+# Memory Grid Settings
+memory:
+  memory_size: 32
+  update_threshold: 0.7
+
+# Desire Module Settings
+desire:
+  num_desires: 4
+  alignment_threshold: 0.5
+  bandwidth_bias_scale: 0.2
+  default_desire_idx: 0
+
+# Episodic Threading Settings
+threading:
+  max_episodes: 50
+  min_episodes_for_arc: 2
+  arc_scale: 0.1
+
+# Phi (Integrated Information) Settings
+phi:
+  awareness_threshold: 1.5
+  history_max_size: 1000
+
+# Body Simulator Settings
+body:
+  state_dim: 16
+  dt: 0.1
+  mass: 1.0
+
+# Multimodal Grounding Settings
+grounding:
+  clip_dim: 512
+  wav_dim: 768
+  prop_dim: 16
+  num_heads: 3
+
+# Qualia Configuration
+qualia:
+  qualia_dim: 4
+  qualia_labels:
+    - calm
+    - alert
+    - curious
+    - conflicted
+  conflict_threshold: 0.6
+
+# Training Configuration (EchoMirror)
+training:
+  learning_rate: 0.01
+  num_epochs: 5
+  phi_loss_weight: 1.0
+
+# Runtime Settings
+device: cpu  # Options: cpu, cuda, mps
+dtype: float32
+enable_ethical_halt: true
+enable_logging: false
+log_interval: 10

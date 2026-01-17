@@ -1,0 +1,127 @@
+# Docker Compose for GRCM development and production
+version: '3.8'
+
+services:
+  # GRCM API Service
+  grcm-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grcm-api
+    restart: unless-stopped
+    command: python -m bentoml serve service:svc --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    environment:
+      - GRCM_CONFIG_PATH=/app/config/grcm_default.yaml
+      - LOG_LEVEL=INFO
+      - WORKERS=2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - grcm-network
+
+  # Gradio UI Service
+  grcm-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grcm-ui
+    restart: unless-stopped
+    command: python -c "from grcm.ui import launch_ui; launch_ui(server_name='0.0.0.0')"
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./config:/app/config:ro
+      - ./models:/app/models:ro
+    environment:
+      - GRCM_CONFIG_PATH=/app/config/grcm_default.yaml
+    depends_on:
+      - grcm-api
+    networks:
+      - grcm-network
+
+  # MLflow Tracking Server
+  mlflow:
+    image: python:3.10-slim
+    container_name: grcm-mlflow
+    restart: unless-stopped
+    command: >
+      sh -c "pip install mlflow &&
+             mlflow server
+             --backend-store-uri sqlite:///mlflow/mlflow.db
+             --default-artifact-root /mlflow/artifacts
+             --host 0.0.0.0
+             --port 5000"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    networks:
+      - grcm-network
+
+  # Prometheus (Metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: grcm-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployment/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - grcm-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grcm-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=grcm_admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    networks:
+      - grcm-network
+
+  # Redis (Caching/Queue)
+  redis:
+    image: redis:7-alpine
+    container_name: grcm-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - grcm-network
+
+networks:
+  grcm-network:
+    driver: bridge
+
+volumes:
+  mlflow-data:
+  prometheus-data:
+  grafana-data:
+  redis-data:

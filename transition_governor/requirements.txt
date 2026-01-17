@@ -1,0 +1,15 @@
+# Core dependencies
+numpy>=1.20.0
+
+# Optional: HuggingFace adapter
+# transformers>=4.30.0
+# torch>=2.0.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Development
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0

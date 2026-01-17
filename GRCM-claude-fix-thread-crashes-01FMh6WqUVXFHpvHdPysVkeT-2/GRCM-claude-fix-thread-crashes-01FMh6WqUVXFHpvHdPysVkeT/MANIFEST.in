@@ -1,0 +1,50 @@
+# MANIFEST.in - Specifies additional files to include in the distribution
+
+# Include configuration files
+include config/*.yaml
+include config/*.yml
+
+# Include documentation
+include README.md
+include LICENSE
+graft docs
+prune docs/_build
+
+# Include tests
+graft tests
+
+# Include examples
+graft examples
+
+# Include type stubs
+global-include *.pyi
+global-include py.typed
+
+# Exclude compiled Python files
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude *.dylib
+
+# Exclude development and build artifacts
+prune .git
+prune .github
+prune deployment
+prune .mypy_cache
+prune .pytest_cache
+prune *.egg-info
+exclude .gitignore
+exclude .gitattributes
+exclude .dockerignore
+
+# Exclude Docker and CI/CD files
+exclude Dockerfile
+exclude docker-compose.yml
+exclude .gitlab-ci.yml
+exclude .travis.yml
+
+# Exclude editor and IDE files
+global-exclude .DS_Store
+global-exclude Thumbs.db
+global-exclude *.swp
+global-exclude *~

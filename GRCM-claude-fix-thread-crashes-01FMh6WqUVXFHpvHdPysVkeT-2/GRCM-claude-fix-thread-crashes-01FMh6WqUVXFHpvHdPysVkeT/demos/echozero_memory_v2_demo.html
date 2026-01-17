@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoZero Memory v2 - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .tagline {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.recording {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.8;
+            font-size: 0.9em;
+        }
+
+        .visualization {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .viz-title {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+        }
+
+        .event-log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .event.hallucination {
+            background: rgba(245, 87, 108, 0.3);
+            border-left: 4px solid #f5576c;
+        }
+
+        .event.sync {
+            background: rgba(102, 126, 234, 0.3);
+            border-left: 4px solid #667eea;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.1);
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+        }
+
+        .info-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .info-panel h3 {
+            margin-bottom: 15px;
+        }
+
+        .info-panel ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-panel li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-panel li:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 EchoZero Memory v2</h1>
+            <div class="tagline">17x More History | 99.8% Energy Savings | Zero Backreaction</div>
+        </header>
+
+        <div class="controls">
+            <button onclick="startSimulation()">▶ Start Simulation</button>
+            <button onclick="stopSimulation()">⏸ Pause</button>
+            <button onclick="resetSimulation()">🔄 Reset</button>
+            <button onclick="toggleRecording()" id="recordBtn">🔴 Record Screen</button>
+            <button onclick="injectHallucination()">⚠️ Inject Hallucination</button>
+            <button onclick="showHelp()">❓ Help</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSteps">0</div>
+                <div class="stat-label">Total Steps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalStates">0</div>
+                <div class="stat-label">States Stored</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="memoryUsage">0 KB</div>
+                <div class="stat-label">Memory Usage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="energySavings">0%</div>
+                <div class="stat-label">Energy Savings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="hallucinationCount">0</div>
+                <div class="stat-label">Hallucinations Detected</div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <div class="visualization">
+                <div class="viz-title">📊 Multi-Resolution Memory Tiers</div>
+                <canvas id="memoryTiersCanvas" width="600" height="300"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4ade80;"></div>
+                        <span>Recent (256, full precision)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fbbf24;"></div>
+                        <span>Medium (1024, rank-32)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f87171;"></div>
+                        <span>Long-term (4096, rank-8)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization">
+                <div class="viz-title">🎯 Torsion Measurement (Hallucination Detection)</div>
+                <canvas id="torsionCanvas" width="600" height="300"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #667eea;"></div>
+                        <span>Normal (&lt;2.0)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f5576c;"></div>
+                        <span>Hallucination (&gt;2.0)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <div class="visualization">
+                <div class="viz-title">🧠 Semantic Buffer (Importance-Based)</div>
+                <canvas id="semanticCanvas" width="600" height="300"></canvas>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="semanticProgress" style="width: 0%">0/256</div>
+                </div>
+            </div>
+
+            <div class="visualization">
+                <div class="viz-title">🔗 Attractor Mapping</div>
+                <canvas id="attractorCanvas" width="600" height="300"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #8b5cf6;"></div>
+                        <span>Active Attractors</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="visualization">
+            <div class="viz-title">📝 Event Log</div>
+            <div class="event-log" id="eventLog">
+                <div class="event">System initialized. Ready to process states...</div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>🎓 How EchoZero Memory v2 Works</h3>
+            <ul>
+                <li><strong>Multi-Resolution Replay:</strong> Stores states at 3 compression levels (recent/medium/longterm)</li>
+                <li><strong>Semantic Eviction:</strong> Keeps important events (high torsion), evicts boring states</li>
+                <li><strong>Hopfield Compression:</strong> Uses learned attractor structure for 2-3x better reconstruction</li>
+                <li><strong>Energy Savings:</strong> Syncs every 300 steps instead of every step (99.8% reduction)</li>
+                <li><strong>Zero Backreaction:</strong> Memory reads outputs but never modifies forward pass</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // Simulation State
+        // =============================================
+        let isRunning = false;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+
+        const state = {
+            steps: 0,
+            recent: [],
+            medium: [],
+            longterm: [],
+            semantic: [],
+            attractors: {},
+            torsionHistory: [],
+            hallucinationCount: 0,
+            syncCount: 0,
+            energySavingsPercent: 0
+        };
+
+        const CAPACITIES = {
+            recent: 256,
+            medium: 1024,
+            longterm: 4096,
+            semantic: 256
+        };
+
+        // =============================================
+        // Canvas Setup
+        // =============================================
+        const canvases = {
+            tiers: document.getElementById('memoryTiersCanvas'),
+            torsion: document.getElementById('torsionCanvas'),
+            semantic: document.getElementById('semanticCanvas'),
+            attractor: document.getElementById('attractorCanvas')
+        };
+
+        const contexts = {};
+        for (const [key, canvas] of Object.entries(canvases)) {
+            contexts[key] = canvas.getContext('2d');
+        }
+
+        // =============================================
+        // Simulation Functions
+        // =============================================
+        function generateState() {
+            // Simulate random state with occasional high-torsion events
+            const torsion = Math.random() < 0.05 ?
+                2.5 + Math.random() * 3 : // Hallucination
+                Math.random() * 1.5;       // Normal
+
+            const novelty = Math.random() * 2;
+            const importance = 0.7 * torsion + 0.3 * novelty;
+
+            return {
+                torsion,
+                novelty,
+                importance,
+                timestamp: state.steps,
+                data: Array(64).fill(0).map(() => Math.random())
+            };
+        }
+
+        function processState(stateData) {
+            state.steps++;
+
+            // Multi-resolution storage
+            state.recent.push(stateData);
+            if (state.recent.length > CAPACITIES.recent) {
+                state.recent.shift();
+            }
+
+            if (state.steps % 4 === 0) {
+                state.medium.push(stateData);
+                if (state.medium.length > CAPACITIES.medium) {
+                    state.medium.shift();
+                }
+            }
+
+            if (state.steps % 16 === 0) {
+                state.longterm.push(stateData);
+                if (state.longterm.length > CAPACITIES.longterm) {
+                    state.longterm.shift();
+                }
+            }
+
+            // Semantic buffer (importance-based)
+            if (stateData.importance >= 1.0) {
+                state.semantic.push(stateData);
+                if (state.semantic.length > CAPACITIES.semantic) {
+                    // Evict lowest importance
+                    state.semantic.sort((a, b) => b.importance - a.importance);
+                    state.semantic = state.semantic.slice(0, CAPACITIES.semantic);
+                }
+            }
+
+            // Attractor mapping (high torsion = sync event)
+            if (stateData.torsion > 2.0) {
+                const attractorId = Math.floor(stateData.torsion * 10) % 10;
+                if (!state.attractors[attractorId]) {
+                    state.attractors[attractorId] = [];
+                }
+                state.attractors[attractorId].push(state.steps);
+                state.hallucinationCount++;
+
+                logEvent(`⚠️ HALLUCINATION detected at step ${state.steps} (torsion=${stateData.torsion.toFixed(2)})`, 'hallucination');
+                state.syncCount++;
+            } else if (state.steps % 300 === 0) {
+                // Regular sync
+                state.syncCount++;
+                logEvent(`🔄 Regular sync at step ${state.steps}`, 'sync');
+            }
+
+            // Track torsion history
+            state.torsionHistory.push(stateData.torsion);
+            if (state.torsionHistory.length > 100) {
+                state.torsionHistory.shift();
+            }
+
+            // Calculate energy savings
+            const totalSteps = state.steps;
+            const syncSteps = state.syncCount;
+            state.energySavingsPercent = ((1 - syncSteps / totalSteps) * 100).toFixed(1);
+        }
+
+        function logEvent(message, type = 'normal') {
+            const log = document.getElementById('eventLog');
+            const event = document.createElement('div');
+            event.className = `event ${type}`;
+            event.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.insertBefore(event, log.firstChild);
+
+            // Keep only last 50 events
+            while (log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // =============================================
+        // Visualization Functions
+        // =============================================
+        function drawMemoryTiers() {
+            const ctx = contexts.tiers;
+            const canvas = canvases.tiers;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const tiers = [
+                { data: state.recent, capacity: CAPACITIES.recent, color: '#4ade80', label: 'Recent' },
+                { data: state.medium, capacity: CAPACITIES.medium, color: '#fbbf24', label: 'Medium' },
+                { data: state.longterm, capacity: CAPACITIES.longterm, color: '#f87171', label: 'Long-term' }
+            ];
+
+            const barHeight = 60;
+            const spacing = 30;
+            const startY = 30;
+
+            tiers.forEach((tier, i) => {
+                const y = startY + i * (barHeight + spacing);
+                const fillWidth = (tier.data.length / tier.capacity) * (canvas.width - 100);
+
+                // Background
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(50, y, canvas.width - 100, barHeight);
+
+                // Fill
+                ctx.fillStyle = tier.color;
+                ctx.fillRect(50, y, fillWidth, barHeight);
+
+                // Text
+                ctx.fillStyle = '#fff';
+                ctx.font = '14px monospace';
+                ctx.fillText(`${tier.label}: ${tier.data.length}/${tier.capacity}`, 60, y + barHeight / 2 + 5);
+            });
+        }
+
+        function drawTorsion() {
+            const ctx = contexts.torsion;
+            const canvas = canvases.torsion;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (state.torsionHistory.length < 2) return;
+
+            const width = canvas.width - 40;
+            const height = canvas.height - 40;
+            const stepWidth = width / 100;
+
+            // Draw threshold line
+            ctx.strokeStyle = 'rgba(245, 87, 108, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            const thresholdY = 30 + height * (1 - 2.0 / 5.0);
+            ctx.moveTo(20, thresholdY);
+            ctx.lineTo(canvas.width - 20, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw torsion graph
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            state.torsionHistory.forEach((torsion, i) => {
+                const x = 20 + i * stepWidth;
+                const y = 30 + height * (1 - torsion / 5.0);
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                // Highlight hallucinations
+                if (torsion > 2.0) {
+                    ctx.fillStyle = '#f5576c';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            ctx.stroke();
+        }
+
+        function drawSemantic() {
+            const ctx = contexts.semantic;
+            const canvas = canvases.semantic;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (state.semantic.length === 0) return;
+
+            // Sort by importance
+            const sorted = [...state.semantic].sort((a, b) => b.importance - a.importance);
+
+            const barWidth = (canvas.width - 40) / CAPACITIES.semantic;
+            const maxImportance = Math.max(...sorted.map(s => s.importance), 5);
+
+            sorted.forEach((item, i) => {
+                const x = 20 + i * barWidth;
+                const height = (item.importance / maxImportance) * (canvas.height - 40);
+                const y = canvas.height - 20 - height;
+
+                // Color based on importance
+                const hue = item.torsion > 2.0 ? 0 : 200; // Red for high torsion, blue otherwise
+                ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.8)`;
+                ctx.fillRect(x, y, Math.max(barWidth - 2, 1), height);
+            });
+
+            // Update progress bar
+            const progress = document.getElementById('semanticProgress');
+            const percent = (state.semantic.length / CAPACITIES.semantic * 100);
+            progress.style.width = percent + '%';
+            progress.textContent = `${state.semantic.length}/${CAPACITIES.semantic}`;
+        }
+
+        function drawAttractors() {
+            const ctx = contexts.attractor;
+            const canvas = canvases.attractor;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const attractorIds = Object.keys(state.attractors);
+            if (attractorIds.length === 0) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '16px sans-serif';
+                ctx.fillText('No attractors activated yet...', canvas.width / 2 - 120, canvas.height / 2);
+                return;
+            }
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 100;
+
+            attractorIds.forEach((id, i) => {
+                const angle = (i / attractorIds.length) * Math.PI * 2;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+
+                const activations = state.attractors[id].length;
+                const size = 10 + Math.min(activations * 2, 30);
+
+                // Draw attractor
+                ctx.fillStyle = '#8b5cf6';
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw label
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.fillText(`A${id} (${activations})`, x - 20, y + size + 15);
+
+                // Draw connection to center
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            });
+
+            // Draw center node
+            ctx.fillStyle = '#667eea';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function updateStats() {
+            document.getElementById('totalSteps').textContent = state.steps;
+            document.getElementById('totalStates').textContent =
+                state.recent.length + state.medium.length + state.longterm.length;
+
+            const memoryKB = (
+                state.recent.length * 64 * 4 +
+                state.medium.length * 32 * 4 +
+                state.longterm.length * 8 * 4
+            ) / 1024;
+            document.getElementById('memoryUsage').textContent = memoryKB.toFixed(1) + ' KB';
+
+            document.getElementById('energySavings').textContent = state.energySavingsPercent + '%';
+            document.getElementById('hallucinationCount').textContent = state.hallucinationCount;
+        }
+
+        function render() {
+            drawMemoryTiers();
+            drawTorsion();
+            drawSemantic();
+            drawAttractors();
+            updateStats();
+        }
+
+        // =============================================
+        // Control Functions
+        // =============================================
+        function startSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            logEvent('▶️ Simulation started');
+
+            function step() {
+                if (!isRunning) return;
+
+                const newState = generateState();
+                processState(newState);
+                render();
+
+                setTimeout(step, 100); // 10 steps per second
+            }
+
+            step();
+        }
+
+        function stopSimulation() {
+            if (!isRunning) return;
+            isRunning = false;
+            logEvent('⏸ Simulation paused');
+        }
+
+        function resetSimulation() {
+            stopSimulation();
+
+            state.steps = 0;
+            state.recent = [];
+            state.medium = [];
+            state.longterm = [];
+            state.semantic = [];
+            state.attractors = {};
+            state.torsionHistory = [];
+            state.hallucinationCount = 0;
+            state.syncCount = 0;
+            state.energySavingsPercent = 0;
+
+            render();
+
+            document.getElementById('eventLog').innerHTML =
+                '<div class="event">System reset. Ready to process states...</div>';
+
+            logEvent('🔄 System reset');
+        }
+
+        function injectHallucination() {
+            if (!isRunning) {
+                alert('Start simulation first');
+                return;
+            }
+
+            const hallucinationState = {
+                torsion: 5.0 + Math.random() * 3,
+                novelty: 2.0,
+                importance: 6.0,
+                timestamp: state.steps,
+                data: Array(64).fill(0).map(() => Math.random())
+            };
+
+            processState(hallucinationState);
+            render();
+        }
+
+        function showHelp() {
+            alert(`EchoZero Memory v2 Demo
+
+Controls:
+- Start: Begin processing states
+- Pause: Pause simulation
+- Reset: Clear all memory
+- Inject Hallucination: Force high-torsion event
+- Record Screen: Capture demo as video
+
+Key Metrics:
+- Energy Savings: % reduction from syncing every 300 steps
+- States Stored: Total across all tiers (17x baseline)
+- Memory Usage: Actual memory consumption
+- Hallucinations: High-torsion events detected
+
+Color Coding:
+- Green: Recent tier (full precision)
+- Yellow: Medium tier (rank-32)
+- Red: Long-term tier (rank-8)
+- Purple: Attractors`);
+        }
+
+        // =============================================
+        // Screen Recording
+        // =============================================
+        async function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { mediaSource: 'screen' }
+                    });
+
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm;codecs=vp9'
+                    });
+
+                    recordedChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `echozero-demo-${Date.now()}.webm`;
+                        a.click();
+
+                        logEvent('💾 Recording saved');
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording');
+                    btn.textContent = '⏹ Stop Recording';
+                    logEvent('🔴 Recording started');
+
+                } catch (err) {
+                    console.error('Recording error:', err);
+                    alert('Failed to start recording. Please allow screen capture.');
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                btn.classList.remove('recording');
+                btn.textContent = '🔴 Record Screen';
+            }
+        }
+
+        // =============================================
+        // Initialize
+        // =============================================
+        window.onload = () => {
+            render();
+            logEvent('✅ EchoZero Memory v2 initialized');
+            logEvent('💡 Click "Start Simulation" to begin');
+        };
+    </script>
+</body>
+</html>

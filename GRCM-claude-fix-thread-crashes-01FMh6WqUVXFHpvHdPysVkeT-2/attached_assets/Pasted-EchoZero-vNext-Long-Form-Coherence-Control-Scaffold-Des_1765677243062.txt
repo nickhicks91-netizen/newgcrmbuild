@@ -1,0 +1,285 @@
+EchoZero vNext — Long-Form Coherence Control Scaffold
+Design Goal (explicit)
+
+Prevent constraint decay, semantic drift, and invariant erosion during long-form expansion tasks without requiring full-document re-ingestion.
+
+This is not about “better understanding.”
+This is about active control.
+
+Core Architectural Shift
+
+From:
+Token-stream continuation with passive memory
+
+To:
+Controlled generation with externalized invariants, hierarchical structure, and rejection gates
+
+EchoZero becomes a governor, not a co-author.
+
+High-Level Block Diagram (conceptual)
+[ Manuscript State ]
+        |
+        v
+[ Invariant Extractor ] -----> [ Invariant Store ] <-----+
+        |                                                 |
+        v                                                 |
+[ Hierarchy Builder ]                                    |
+        |                                                 |
+        v                                                 |
+[ Chapter Expansion Request ]                             |
+        |                                                 |
+        v                                                 |
+[ LLM Generator ] ----------------------------------------+
+        |
+        v
+[ Coherence Critic ]
+        |
+   +----+----+
+   |         |
+[ PASS ]   [ FAIL ]
+   |         |
+   v         v
+[ Commit ] [ Regenerate ]
+
+Module Breakdown (this is the scaffold)
+1. Invariant Extractor (One-time + incremental)
+
+Purpose:
+Promote passive prose into active constraints.
+
+Inputs:
+
+Full manuscript (once)
+
+Optional author annotations
+
+Outputs (stored, not re-prompted verbatim):
+
+Definitions
+
+Non-negotiable claims
+
+Tone/voice constraints
+
+Prohibited actions (“no new claims”, “no future anticipation”)
+
+Cross-chapter dependencies
+
+Important design choice:
+These are symbolic objects, not text blobs.
+
+Example internal form (conceptual):
+
+INVARIANT_17:
+  type: claim
+  scope: global
+  statement: "X causes Y via mechanism Z"
+  elasticity: NONE
+
+
+This is where EchoZero already points — formalize it harder.
+
+2. Invariant Store (Persistent, privileged memory)
+
+Key properties:
+
+Always injected
+
+Not distance-weighted
+
+Not summarized away
+
+Immutable unless explicitly edited
+
+This store is not part of the LLM prompt in raw form.
+It is used by:
+
+prompt compiler
+
+critic
+
+output gate
+
+This is the first real fix.
+
+3. Hierarchy Builder (Document ≠ token stream)
+
+Purpose:
+Turn the manuscript into a tree, not a line.
+
+Structure:
+
+Document
+ ├─ Chapter 1
+ │   ├─ Section A
+ │   └─ Claims
+ ├─ Chapter 2
+ │   └─ …
+
+
+Each node carries:
+
+Local invariants
+
+Allowed references
+
+Expansion permissions
+
+This lets EchoZero know:
+
+what is in scope
+
+what must not be touched
+
+what cannot be introduced
+
+Transformers don’t do this. Middleware must.
+
+4. Prompt Compiler (Controlled injection)
+
+Purpose:
+Prevent constraint dilution.
+
+Instead of:
+
+“Here’s Chapter 12. Expand it.”
+
+You generate:
+
+Local chapter text
+
+Relevant global invariants
+
+Local invariants
+
+Expansion mode flags
+
+Conceptual compiled prompt structure:
+
+SYSTEM:
+You are in EXPANSION-ONLY MODE.
+Introducing new claims is a violation.
+
+LOCKED INVARIANTS:
+- I1
+- I7
+- I12
+
+LOCAL CONTEXT:
+Chapter 12 (original text)
+
+TASK:
+Elaborate existing arguments only.
+
+
+This is mechanical. No creativity required.
+
+5. LLM Generator (unchanged, deliberately)
+
+You do not modify the model.
+That’s the point.
+
+The model is treated as:
+
+a high-bandwidth linguistic actuator
+
+6. Coherence Critic (This is the missing piece)
+
+Purpose:
+Detect violations before text is committed.
+
+It checks output against:
+
+invariant set
+
+hierarchy rules
+
+expansion permissions
+
+Failure modes it flags:
+
+softened claims
+
+added mechanisms
+
+tone drift
+
+contradiction
+
+anticipatory leakage (later chapters)
+
+This can be:
+
+another LLM
+
+a rules engine
+
+a hybrid
+
+What matters: it has veto power.
+
+7. Invariant Violation Gate (Hard stop)
+
+This is the non-negotiable addition.
+
+If the critic flags a violation:
+
+output is rejected
+
+regeneration is forced
+
+or human review is requested
+
+No “best effort.”
+No “probably okay.”
+
+This converts probabilistic generation into bounded execution.
+
+8. Commit Layer (State update)
+
+Only after passing:
+
+expanded chapter replaces original
+
+hierarchy node updated
+
+invariants unchanged unless explicitly edited
+
+No silent drift accumulation.
+
+Why This Legitimately Fixes the Problem
+
+It addresses each root cause directly:
+
+Failure	Fix
+Attention dilution	Constraints are external
+Recency bias	Invariants re-injected every time
+Continuation pressure	Critic + gate override fluency
+Flat context	Hierarchical document model
+Drift accumulation	Persistent invariant store
+
+Nothing here relies on “thinking harder.”
+
+How This Fits EchoZero Specifically
+
+EchoZero already has:
+
+coherence locking concepts
+
+engram-level memory
+
+control-loop intuition
+
+This scaffold:
+
+operationalizes those ideas
+
+removes metaphor
+
+adds enforcement
+
+The single most important addition:
+
+Invariant Violation Gate with regeneration authority
+
+That’s the difference between a helpful assistant and a control system.

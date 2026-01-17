@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoZero Memory v2 - Neural Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00ff88;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(0, 255, 136, 0.05);
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+            letter-spacing: 4px;
+        }
+
+        .tagline {
+            font-size: 1.3em;
+            opacity: 0.8;
+            color: #00ddff;
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        button {
+            background: linear-gradient(135deg, #00ff88 0%, #00ddff 100%);
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.recording {
+            background: linear-gradient(135deg, #ff0066 0%, #ff3366 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(255, 0, 102, 0.8); }
+            50% { opacity: 0.7; box-shadow: 0 0 40px rgba(255, 0, 102, 1); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(0, 255, 136, 0.6);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        .stat-label {
+            opacity: 0.7;
+            font-size: 0.9em;
+            color: #00ddff;
+        }
+
+        .neural-canvas {
+            position: relative;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0, 255, 136, 0.1);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viz-overlay {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            font-size: 1.2em;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        .event-log {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.1);
+        }
+
+        .event {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            background: rgba(0, 255, 136, 0.05);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            border-left: 3px solid rgba(0, 255, 136, 0.3);
+            transition: all 0.3s;
+        }
+
+        .event:hover {
+            background: rgba(0, 255, 136, 0.1);
+            border-left-color: rgba(0, 255, 136, 0.8);
+        }
+
+        .event.hallucination {
+            background: rgba(255, 0, 102, 0.1);
+            border-left-color: #ff0066;
+            animation: glow 2s ease-in-out;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: none; }
+            50% { box-shadow: 0 0 20px rgba(255, 0, 102, 0.6); }
+        }
+
+        .event.sync {
+            background: rgba(0, 221, 255, 0.1);
+            border-left-color: #00ddff;
+        }
+
+        /* Scrollbar styling */
+        .event-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .event-log::-webkit-scrollbar-track {
+            background: rgba(0, 255, 136, 0.05);
+            border-radius: 4px;
+        }
+
+        .event-log::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.3);
+            border-radius: 4px;
+        }
+
+        .event-log::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 255, 136, 0.5);
+        }
+
+        .legend {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #00ff88;
+        }
+
+        .legend-color {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ ECHOZERO NEURAL ENGINE ⚡</h1>
+            <div class="tagline">Biological Memory Architecture | 99.8% Energy Efficiency</div>
+        </header>
+
+        <div class="controls">
+            <button onclick="startSimulation()">▶ ACTIVATE</button>
+            <button onclick="stopSimulation()">⏸ PAUSE</button>
+            <button onclick="resetSimulation()">🔄 RESET</button>
+            <button onclick="toggleRecording()" id="recordBtn">🔴 RECORD</button>
+            <button onclick="injectHallucination()">⚠️ INJECT SPIKE</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSteps">0</div>
+                <div class="stat-label">NEURAL PULSES</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalStates">0</div>
+                <div class="stat-label">SYNAPSES ACTIVE</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="memoryUsage">0 KB</div>
+                <div class="stat-label">CORTEX SIZE</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="energySavings">0%</div>
+                <div class="stat-label">METABOLIC EFFICIENCY</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="hallucinationCount">0</div>
+                <div class="stat-label">ANOMALIES DETECTED</div>
+            </div>
+        </div>
+
+        <div class="neural-canvas" style="height: 600px;">
+            <canvas id="brainCanvas" width="1600" height="600"></canvas>
+            <div class="viz-overlay">🧠 NEURAL NETWORK TOPOLOGY</div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00ff88; color: #00ff88;"></div>
+                <span>Recent Memory (Full Fidelity)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #00ddff; color: #00ddff;"></div>
+                <span>Medium Term (Compressed)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff0066; color: #ff0066;"></div>
+                <span>Hallucination Event</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffaa00; color: #ffaa00;"></div>
+                <span>Long Term (Archived)</span>
+            </div>
+        </div>
+
+        <div class="neural-canvas" style="height: 400px; margin-top: 20px;">
+            <canvas id="signalCanvas" width="1600" height="400"></canvas>
+            <div class="viz-overlay">📊 TORSION SIGNAL MONITORING</div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <div class="viz-overlay" style="position: relative; margin-bottom: 10px;">📝 SYSTEM EVENT LOG</div>
+            <div class="event-log" id="eventLog">
+                <div class="event">⚡ Neural engine initialized...</div>
+                <div class="event">💾 Memory subsystems online...</div>
+                <div class="event">🎯 Torsion detection active...</div>
+                <div class="event">✅ Ready to process neural signals...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // Neural Visualization Engine
+        // =============================================
+
+        let isRunning = false;
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let animationFrame = null;
+
+        const state = {
+            steps: 0,
+            neurons: [],
+            connections: [],
+            particles: [],
+            torsionHistory: [],
+            hallucinationCount: 0,
+            syncCount: 0,
+            energySavingsPercent: 0,
+            memoryTiers: { recent: 0, medium: 0, longterm: 0 }
+        };
+
+        // Canvas setup
+        const brainCanvas = document.getElementById('brainCanvas');
+        const brainCtx = brainCanvas.getContext('2d');
+        const signalCanvas = document.getElementById('signalCanvas');
+        const signalCtx = signalCanvas.getContext('2d');
+
+        // Neuron class
+        class Neuron {
+            constructor(x, y, layer, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.layer = layer; // 'recent', 'medium', 'longterm', 'semantic', 'attractor'
+                this.type = type;
+                this.activation = 0;
+                this.baseRadius = 4;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+                this.connections = [];
+                this.lastFired = 0;
+            }
+
+            update(time) {
+                // Decay activation
+                this.activation *= 0.95;
+                this.pulsePhase += 0.05;
+
+                // Natural pulsing for active neurons
+                if (this.activation > 0.1) {
+                    this.lastFired = time;
+                }
+            }
+
+            fire(intensity = 1.0) {
+                this.activation = Math.min(1.0, this.activation + intensity);
+            }
+
+            draw(ctx, time) {
+                const colors = {
+                    recent: '#00ff88',
+                    medium: '#00ddff',
+                    longterm: '#ffaa00',
+                    semantic: '#ff00ff',
+                    attractor: '#ff0066'
+                };
+
+                const color = colors[this.layer] || '#00ff88';
+                const radius = this.baseRadius + this.activation * 6 + Math.sin(this.pulsePhase) * 2;
+
+                // Glow effect
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, radius * 3);
+                gradient.addColorStop(0, color + 'aa');
+                gradient.addColorStop(0.3, color + '44');
+                gradient.addColorStop(1, color + '00');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, radius * 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Core
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Bright center when active
+                if (this.activation > 0.5) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, radius * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Connection class
+        class Connection {
+            constructor(from, to, strength = 0.5) {
+                this.from = from;
+                this.to = to;
+                this.strength = strength;
+                this.signal = 0;
+                from.connections.push(this);
+            }
+
+            update() {
+                // Propagate signal
+                if (this.from.activation > 0.3 && this.signal < 1) {
+                    this.signal = Math.min(1, this.signal + 0.1);
+                    if (this.signal > 0.8) {
+                        this.to.fire(this.strength * this.from.activation);
+                    }
+                } else {
+                    this.signal *= 0.9;
+                }
+            }
+
+            draw(ctx) {
+                if (this.signal < 0.05) return;
+
+                const opacity = this.signal * this.strength;
+                ctx.strokeStyle = `rgba(0, 255, 136, ${opacity * 0.3})`;
+                ctx.lineWidth = 1 + this.signal * 2;
+
+                ctx.beginPath();
+                ctx.moveTo(this.from.x, this.from.y);
+                ctx.lineTo(this.to.x, this.to.y);
+                ctx.stroke();
+
+                // Traveling particle
+                if (this.signal > 0.2 && this.signal < 0.9) {
+                    const t = (this.signal - 0.2) / 0.7;
+                    const px = this.from.x + (this.to.x - this.from.x) * t;
+                    const py = this.from.y + (this.to.y - this.from.y) * t;
+
+                    ctx.fillStyle = '#00ff88';
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Initialize neural network topology
+        function initializeNeuralNetwork() {
+            state.neurons = [];
+            state.connections = [];
+
+            const width = brainCanvas.width;
+            const height = brainCanvas.height;
+
+            // Create neurons in layers
+            const layers = {
+                recent: { count: 30, y: height * 0.3, color: 'recent' },
+                medium: { count: 25, y: height * 0.5, color: 'medium' },
+                longterm: { count: 20, y: height * 0.7, color: 'longterm' },
+                semantic: { count: 15, y: height * 0.4, color: 'semantic', offset: width * 0.8 },
+                attractor: { count: 10, y: height * 0.6, color: 'attractor', offset: width * 0.8 }
+            };
+
+            for (const [layerName, config] of Object.entries(layers)) {
+                const offset = config.offset || width * 0.1;
+                const spread = config.offset ? width * 0.15 : width * 0.7;
+
+                for (let i = 0; i < config.count; i++) {
+                    const x = offset + (i / config.count) * spread + (Math.random() - 0.5) * 30;
+                    const y = config.y + (Math.random() - 0.5) * 80;
+                    state.neurons.push(new Neuron(x, y, config.color));
+                }
+            }
+
+            // Create connections
+            // Recent -> Medium
+            connectLayers('recent', 'medium', 0.7, 3);
+            // Medium -> Longterm
+            connectLayers('medium', 'longterm', 0.6, 2);
+            // All -> Semantic (sparse)
+            connectLayers('recent', 'semantic', 0.3, 1);
+            connectLayers('medium', 'semantic', 0.3, 1);
+            // Semantic <-> Attractor
+            connectLayers('semantic', 'attractor', 0.8, 2);
+            connectLayers('attractor', 'semantic', 0.5, 1);
+            // Longterm -> Attractor
+            connectLayers('longterm', 'attractor', 0.4, 1);
+        }
+
+        function connectLayers(fromLayer, toLayer, strength, connectionsPerNeuron) {
+            const fromNeurons = state.neurons.filter(n => n.layer === fromLayer);
+            const toNeurons = state.neurons.filter(n => n.layer === toLayer);
+
+            fromNeurons.forEach(from => {
+                for (let i = 0; i < connectionsPerNeuron; i++) {
+                    const to = toNeurons[Math.floor(Math.random() * toNeurons.length)];
+                    if (to && !from.connections.find(c => c.to === to)) {
+                        new Connection(from, to, strength);
+                        state.connections.push(from.connections[from.connections.length - 1]);
+                    }
+                }
+            });
+        }
+
+        // Process state through neural network
+        function processNeuralState() {
+            state.steps++;
+
+            // Generate state (hallucinations are rare: 0.2% = 1 in 500)
+            const torsion = Math.random() < 0.002 ?
+                2.5 + Math.random() * 3 :
+                Math.random() * 1.5;
+
+            // Fire input neurons based on torsion
+            const recentNeurons = state.neurons.filter(n => n.layer === 'recent');
+            const numToFire = Math.floor(recentNeurons.length * 0.3);
+
+            for (let i = 0; i < numToFire; i++) {
+                const neuron = recentNeurons[Math.floor(Math.random() * recentNeurons.length)];
+                neuron.fire(torsion > 2.0 ? 1.5 : 0.8);
+            }
+
+            // Update memory tiers
+            state.memoryTiers.recent = Math.min(256, state.memoryTiers.recent + 1);
+            if (state.steps % 4 === 0) {
+                state.memoryTiers.medium = Math.min(1024, state.memoryTiers.medium + 1);
+            }
+            if (state.steps % 16 === 0) {
+                state.memoryTiers.longterm = Math.min(4096, state.memoryTiers.longterm + 1);
+            }
+
+            // Hallucination detection
+            if (torsion > 2.0) {
+                state.hallucinationCount++;
+                state.syncCount++;
+
+                // Fire semantic and attractor neurons strongly
+                state.neurons.filter(n => n.layer === 'semantic' || n.layer === 'attractor')
+                    .forEach(n => n.fire(1.5));
+
+                logEvent(`⚠️ ANOMALY DETECTED: Torsion spike ${torsion.toFixed(2)}`, 'hallucination');
+            } else if (state.steps % 300 === 0) {
+                state.syncCount++;
+                logEvent(`🔄 Routine sync at pulse ${state.steps}`, 'sync');
+            }
+
+            // Track torsion
+            state.torsionHistory.push(torsion);
+            if (state.torsionHistory.length > 200) {
+                state.torsionHistory.shift();
+            }
+
+            // Calculate energy savings
+            state.energySavingsPercent = ((1 - state.syncCount / state.steps) * 100).toFixed(1);
+        }
+
+        // Animation loop
+        function animate(time) {
+            if (!isRunning) return;
+
+            // Clear canvases
+            brainCtx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+            brainCtx.fillRect(0, 0, brainCanvas.width, brainCanvas.height);
+
+            // Update and draw connections
+            state.connections.forEach(conn => {
+                conn.update();
+                conn.draw(brainCtx);
+            });
+
+            // Update and draw neurons
+            state.neurons.forEach(neuron => {
+                neuron.update(time);
+                neuron.draw(brainCtx, time);
+            });
+
+            // Draw signal graph
+            drawSignalGraph();
+
+            // Update stats
+            updateStats();
+
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        function drawSignalGraph() {
+            signalCtx.fillStyle = 'rgba(10, 14, 39, 0.3)';
+            signalCtx.fillRect(0, 0, signalCanvas.width, signalCanvas.height);
+
+            if (state.torsionHistory.length < 2) return;
+
+            const width = signalCanvas.width - 40;
+            const height = signalCanvas.height - 40;
+            const stepWidth = width / 200;
+
+            // Draw grid
+            signalCtx.strokeStyle = 'rgba(0, 255, 136, 0.1)';
+            signalCtx.lineWidth = 1;
+            for (let i = 0; i <= 5; i++) {
+                const y = 20 + (height / 5) * i;
+                signalCtx.beginPath();
+                signalCtx.moveTo(20, y);
+                signalCtx.lineTo(signalCanvas.width - 20, y);
+                signalCtx.stroke();
+            }
+
+            // Draw threshold line
+            signalCtx.strokeStyle = 'rgba(255, 0, 102, 0.5)';
+            signalCtx.lineWidth = 2;
+            signalCtx.setLineDash([5, 5]);
+            const thresholdY = 20 + height * (1 - 2.0 / 5.0);
+            signalCtx.beginPath();
+            signalCtx.moveTo(20, thresholdY);
+            signalCtx.lineTo(signalCanvas.width - 20, thresholdY);
+            signalCtx.stroke();
+            signalCtx.setLineDash([]);
+
+            // Draw signal
+            signalCtx.strokeStyle = '#00ff88';
+            signalCtx.lineWidth = 2;
+            signalCtx.shadowBlur = 10;
+            signalCtx.shadowColor = '#00ff88';
+            signalCtx.beginPath();
+
+            state.torsionHistory.forEach((torsion, i) => {
+                const x = 20 + i * stepWidth;
+                const y = 20 + height * (1 - torsion / 5.0);
+
+                if (i === 0) {
+                    signalCtx.moveTo(x, y);
+                } else {
+                    signalCtx.lineTo(x, y);
+                }
+
+                // Highlight spikes
+                if (torsion > 2.0) {
+                    signalCtx.stroke();
+                    signalCtx.fillStyle = '#ff0066';
+                    signalCtx.shadowBlur = 20;
+                    signalCtx.shadowColor = '#ff0066';
+                    signalCtx.beginPath();
+                    signalCtx.arc(x, y, 5, 0, Math.PI * 2);
+                    signalCtx.fill();
+                    signalCtx.shadowBlur = 10;
+                    signalCtx.shadowColor = '#00ff88';
+                    signalCtx.strokeStyle = '#00ff88';
+                    signalCtx.beginPath();
+                    signalCtx.moveTo(x, y);
+                }
+            });
+
+            signalCtx.stroke();
+            signalCtx.shadowBlur = 0;
+        }
+
+        function updateStats() {
+            document.getElementById('totalSteps').textContent = state.steps;
+            document.getElementById('totalStates').textContent =
+                state.memoryTiers.recent + state.memoryTiers.medium + state.memoryTiers.longterm;
+
+            const memoryKB = (
+                state.memoryTiers.recent * 64 * 4 +
+                state.memoryTiers.medium * 32 * 4 +
+                state.memoryTiers.longterm * 8 * 4
+            ) / 1024;
+            document.getElementById('memoryUsage').textContent = memoryKB.toFixed(1) + ' KB';
+
+            document.getElementById('energySavings').textContent = state.energySavingsPercent + '%';
+            document.getElementById('hallucinationCount').textContent = state.hallucinationCount;
+        }
+
+        function logEvent(message, type = 'normal') {
+            const log = document.getElementById('eventLog');
+            const event = document.createElement('div');
+            event.className = `event ${type}`;
+            event.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.insertBefore(event, log.firstChild);
+
+            while (log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        // Control functions
+        function startSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            logEvent('⚡ Neural engine activated');
+
+            function step() {
+                if (!isRunning) return;
+                processNeuralState();
+                setTimeout(step, 100);
+            }
+
+            step();
+            animate(performance.now());
+        }
+
+        function stopSimulation() {
+            if (!isRunning) return;
+            isRunning = false;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            logEvent('⏸ Neural activity paused');
+        }
+
+        function resetSimulation() {
+            stopSimulation();
+
+            state.steps = 0;
+            state.hallucinationCount = 0;
+            state.syncCount = 0;
+            state.energySavingsPercent = 0;
+            state.torsionHistory = [];
+            state.memoryTiers = { recent: 0, medium: 0, longterm: 0 };
+
+            initializeNeuralNetwork();
+            updateStats();
+
+            document.getElementById('eventLog').innerHTML =
+                '<div class="event">⚡ Neural engine reset and ready...</div>';
+
+            logEvent('🔄 System reset complete');
+        }
+
+        function injectHallucination() {
+            if (!isRunning) {
+                alert('Activate neural engine first');
+                return;
+            }
+
+            // Fire all semantic and attractor neurons
+            state.neurons.filter(n => n.layer === 'semantic' || n.layer === 'attractor')
+                .forEach(n => n.fire(2.0));
+
+            state.torsionHistory.push(5.0 + Math.random() * 3);
+            state.hallucinationCount++;
+            state.syncCount++;
+
+            logEvent('⚠️ CRITICAL: Injected anomaly spike', 'hallucination');
+        }
+
+        async function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { mediaSource: 'screen' }
+                    });
+
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm;codecs=vp9'
+                    });
+
+                    recordedChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            recordedChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `echozero-neural-${Date.now()}.webm`;
+                        a.click();
+                        logEvent('💾 Recording saved');
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording');
+                    btn.textContent = '⏹ STOP REC';
+                    logEvent('🔴 Recording started');
+
+                } catch (err) {
+                    console.error('Recording error:', err);
+                    alert('Failed to start recording. Please allow screen capture.');
+                }
+            } else {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                isRecording = false;
+                btn.classList.remove('recording');
+                btn.textContent = '🔴 RECORD';
+            }
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initializeNeuralNetwork();
+            updateStats();
+            logEvent('✅ All subsystems initialized');
+            logEvent('💡 Click ACTIVATE to begin neural processing');
+        };
+    </script>
+</body>
+</html>

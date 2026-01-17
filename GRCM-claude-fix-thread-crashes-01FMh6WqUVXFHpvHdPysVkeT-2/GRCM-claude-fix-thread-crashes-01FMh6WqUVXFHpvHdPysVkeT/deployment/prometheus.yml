@@ -1,0 +1,182 @@
+# Prometheus Configuration for GRCM Monitoring
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'grcm-production'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # GRCM API metrics
+  - job_name: 'grcm-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'grcm-api:8000'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'grcm_.*'
+        action: keep
+
+  # GRCM UI metrics
+  - job_name: 'grcm-ui'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'grcm-ui:7860'
+
+  # MLflow tracking server
+  - job_name: 'mlflow'
+    static_configs:
+      - targets:
+          - 'mlflow:5000'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'localhost:9090'
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+
+  # Kubernetes API server metrics
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+      - role: endpoints
+    scheme: https
+    tls_config:
+      ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: default;kubernetes;https
+
+  # Kubernetes pods with prometheus.io annotations
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: kubernetes_pod_name
+
+# Alert rules
+---
+# File: /etc/prometheus/rules/grcm_alerts.yml
+groups:
+  - name: grcm_alerts
+    interval: 30s
+    rules:
+      # High latency alert
+      - alert: HighLatency
+        expr: grcm_inference_latency_ms > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High inference latency detected"
+          description: "GRCM inference latency is above 100ms for 5 minutes"
+
+      # Low coherence alert
+      - alert: LowCoherence
+        expr: grcm_coherence_mean < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low coherence detected"
+          description: "Average coherence below 0.5 for 10 minutes"
+
+      # Ethical halt rate alert
+      - alert: HighEthicalHaltRate
+        expr: rate(grcm_ethical_halts_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High ethical halt rate"
+          description: "Ethical halts occurring at >10% rate"
+
+      # API error rate alert
+      - alert: HighErrorRate
+        expr: rate(grcm_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate above 5% for 5 minutes"
+
+      # Memory usage alert
+      - alert: HighMemoryUsage
+        expr: grcm_memory_usage_mb > 1500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "GRCM memory usage above 1.5GB"
+
+      # Service down alert
+      - alert: ServiceDown
+        expr: up{job="grcm-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GRCM API service is down"
+          description: "GRCM API has been down for 2 minutes"
+
+      # Low Phi alert
+      - alert: LowPhi
+        expr: grcm_phi < 0.5
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low integrated information"
+          description: "Phi value below 0.5 for 15 minutes"
+
+      # High conflict rate
+      - alert: HighConflictRate
+        expr: grcm_qualia_conflicted > 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High conflict state detected"
+          description: "Conflicted qualia above 0.7 for 5 minutes"
