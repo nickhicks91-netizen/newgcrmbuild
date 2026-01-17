@@ -8,7 +8,8 @@ This module implements coupled nonlinear oscillator dynamics with:
 - Want modulation γψ
 - External drive I(t)
 - Hub constraint -λΣψ
-- M\u00f6bius topological consistency enforcement
+- Möbius topological consistency enforcement
+- Governance and hallucination correction (Phase 2 & 3)
 """
 
 from .dynamics import (
@@ -26,6 +27,22 @@ from .memory_engine import EchoZeroMemoryEngine, EchoZeroMemoryEngineWithSnapbac
 from .memory_engine_threadsafe import (
     ThreadSafeEchoZeroMemoryEngine,
     ThreadSafeEchoZeroMemoryEngineWithSnapback,
+)
+
+# Phase 2 & 3: Governance and Semantic Gravity
+from .governance import (
+    TransitionGovernor,
+    AIState,
+    GovernorOutput,
+    GovernanceState,
+    SemanticGravityEngine,
+    HallucinationType,
+)
+from .governance.grcm_integration import (
+    GovernedMemoryIntegration,
+    GRCMState,
+    add_governance_to_grcm,
+    GovernedGRCMForward,
 )
 
 __all__ = [
@@ -47,4 +64,15 @@ __all__ = [
     "EchoZeroMemoryEngineWithSnapback",
     "ThreadSafeEchoZeroMemoryEngine",
     "ThreadSafeEchoZeroMemoryEngineWithSnapback",
+    # Governance (Phase 2 & 3)
+    "TransitionGovernor",
+    "AIState",
+    "GovernorOutput",
+    "GovernanceState",
+    "SemanticGravityEngine",
+    "HallucinationType",
+    "GovernedMemoryIntegration",
+    "GRCMState",
+    "add_governance_to_grcm",
+    "GovernedGRCMForward",
 ]
